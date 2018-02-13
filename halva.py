@@ -180,8 +180,8 @@ for all_file in all_files:
                     odobr_in_xls += 1
 
         hidden_in_xls = round((odobr_in_db + odobr_in_xls) * K_HIDDEN - hidden_in_db)
-        if hidden_in_xls < 0:
-            hidden_in_xls = 0
+        if hidden_in_xls > odobr_in_xls:
+            hidden_in_xls = odobr_in_xls
         print('В файле', all_file, 'из', odobr_in_db + odobr_in_xls, 'одобренных будет скрыто', hidden_in_xls)
 
         statuses = []
