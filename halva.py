@@ -89,11 +89,11 @@ for all_file in all_files:
         rows = cursor.fetchall()
         hidden_in_db = rows[0][0]
 
-        # заявки, без статусов: одобрено, отказ, отрицательный результат
+        # заявки, без статусов: одобрено, отрицательный результат (отказ может стать одобреным)
         cursor = dbconn.cursor()
         cursor.execute(
-            'SELECT remote_id, inserted_code from saturn_fin.sovcombank_products WHERE status_code != 5 '
-            'AND status_code != 3 AND status_code != 2')
+            'SELECT remote_id, inserted_code from saturn_fin.sovcombank_products WHERE status_code != 2 ')
+#            'AND status_code != 5')
         bids_in_db = cursor.fetchall()
         dbconn.close()
 
@@ -182,14 +182,20 @@ for all_file in all_files:
         hidden_in_xls = round((odobr_in_db + odobr_in_xls) * K_HIDDEN - hidden_in_db)
         if hidden_in_xls > odobr_in_xls:
             hidden_in_xls = odobr_in_xls
-        print('В файле', all_file, 'из', odobr_in_db + odobr_in_xls, 'одобренных будет скрыто', hidden_in_xls)
+        elif hidden_in_xls < 0:
+            hidden_in_xls = 0
+        print('Скрытых в БД:', round(100*hidden_in_db/odobr_in_db), '%. В файле', all_file, 'из',
+              odobr_in_xls, 'партнерских одобренных будет скрыто', hidden_in_xls)
 
         statuses = []
+        st2 = []
         for i, bid_in_xls in enumerate(bids_in_xls_db):
             if bids_in_db_agents[i] in our_agents:
                 statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
                                  bid_in_xls['visit_status_code'], 0, bid_in_xls['remote_id']))
             else:
+                if bid_in_xls['status'] == 2:
+                    st2.append(bid_in_xls['remote_id'])
                 if bid_in_xls['status'] == 2 and hidden_in_xls > 0:
                     hidden_in_xls -= 1
                     statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
@@ -201,7 +207,7 @@ for all_file in all_files:
         gs =  0
         h_i = []
         for i, st in enumerate(statuses):
-            if st[3] == 1:
+            if st[0] == 2:
                 gs +=1
                 h_i.append(i)
 
