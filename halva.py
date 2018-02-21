@@ -17,7 +17,7 @@ OUR_PARTNERS = [45,191,234]
 # Коэффициент обрезки
 K_HIDDEN = 0.1
 # Дата начала обрезки
-DATE_HIDE = '2018-01-27'
+DATE_HIDE = '2018-01-31'
 # До какой даты ставить статус "Отрицательный результат"
 DATE_END_OTKAZ = '2017-12-31'
 
@@ -208,10 +208,15 @@ for all_file in all_files:
                 if bid_in_xls['status'] == 2:
                     st2.append(bid_in_xls['remote_id'])
                 if bid_in_xls['status'] == 2 and hidden_in_xls > 0:
-                    if another_agents[bids_in_db_agents[i]][1]/another_agents[bids_in_db_agents[i]][0] < K_HIDDEN:
+                    if another_agents[bids_in_db_agents[i]][0] > 9:
+                        k_hidden_in_agent = another_agents[bids_in_db_agents[i]][1]/another_agents[bids_in_db_agents[i]][0]
+                    else:
+                        k_hidden_in_agent = 1
+                    if  k_hidden_in_agent < K_HIDDEN:
                         hidden_in_xls -= 1
                         statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
                                          bid_in_xls['visit_status_code'], 1, bid_in_xls['remote_id']))
+                        another_agents[bids_in_db_agents[i]][1] += 1
                     else:
                         statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
                                          bid_in_xls['visit_status_code'], 0, bid_in_xls['remote_id']))
@@ -222,7 +227,7 @@ for all_file in all_files:
         gs =  0
         h_i = []
         for i, st in enumerate(statuses):
-            if st[0] == 2:
+            if st[3] == 1:
                 gs +=1
                 h_i.append(i)
 
