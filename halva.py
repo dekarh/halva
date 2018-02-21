@@ -90,11 +90,11 @@ for all_file in all_files:
         rows = cursor.fetchall()
         hidden_in_db = rows[0][0]
 
-        # заявки, без статусов: одобрено, отрицательный результат (!!! отказ может стать одобреным !!!)
+        # заявки, без статусов: одобрено, (!!! отрицательный результат и отказ может стать одобреным !!!)
         cursor = dbconn.cursor()
         cursor.execute(
-            'SELECT remote_id, inserted_code from saturn_fin.sovcombank_products WHERE status_code != 2 ')
-#            'AND status_code != 5')
+            'SELECT remote_id, inserted_code from saturn_fin.sovcombank_products WHERE status_code != 2 '
+                    'ORDER BY inserted_date DESC')
         bids_in_db = cursor.fetchall()
 
         # создаем список не наших агентов с кол-вом одобренных и скрытых
