@@ -63,6 +63,7 @@ cursor.execute(sql, partners)
 rows = cursor.fetchall()
 for row in rows:
     our_agents.append(row[0])
+another_agents = {}
 
 all_files.sort()
 for all_file in all_files:
@@ -89,12 +90,22 @@ for all_file in all_files:
         rows = cursor.fetchall()
         hidden_in_db = rows[0][0]
 
-        # заявки, без статусов: одобрено, отрицательный результат (отказ может стать одобреным)
+        # заявки, без статусов: одобрено, отрицательный результат (!!! отказ может стать одобреным !!!)
         cursor = dbconn.cursor()
         cursor.execute(
             'SELECT remote_id, inserted_code from saturn_fin.sovcombank_products WHERE status_code != 2 ')
 #            'AND status_code != 5')
         bids_in_db = cursor.fetchall()
+
+        # создаем список не наших агентов с кол-вом одобренных и скрытых
+        for bid_in_db in bids_in_db:
+            if (bid_in_db[1] not in another_agents) and (bid_in_db[1] not in our_agents):
+                cursor = dbconn.cursor()
+                cursor.execute('SELECT (SELECT count(*) FROM saturn_fin.sovcombank_products WHERE status_hidden = 1 '
+                               'AND inserted_code = %s), (SELECT count(*) FROM saturn_fin.sovcombank_products '
+                               'WHERE status_code = 2 AND inserted_code = %s)', (bid_in_db[1],bid_in_db[1]))
+                rows = cursor.fetchall()
+                another_agents[bid_in_db[1]] = [rows[0][1], rows[0][0]]
         dbconn.close()
 
         print(datetime.now().strftime("%H:%M:%S"),'загружаем', all_file) # загружаем csv
@@ -197,9 +208,13 @@ for all_file in all_files:
                 if bid_in_xls['status'] == 2:
                     st2.append(bid_in_xls['remote_id'])
                 if bid_in_xls['status'] == 2 and hidden_in_xls > 0:
-                    hidden_in_xls -= 1
-                    statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
-                                     bid_in_xls['visit_status_code'], 1, bid_in_xls['remote_id']))
+                    if another_agents[bids_in_db_agents[i]][1]/another_agents[bids_in_db_agents[i]][0] < K_HIDDEN:
+                        hidden_in_xls -= 1
+                        statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
+                                         bid_in_xls['visit_status_code'], 1, bid_in_xls['remote_id']))
+                    else:
+                        statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
+                                         bid_in_xls['visit_status_code'], 0, bid_in_xls['remote_id']))
                 else:
                     statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
                                      bid_in_xls['visit_status_code'], 0, bid_in_xls['remote_id']))
