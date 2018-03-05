@@ -116,19 +116,19 @@ for all_file in all_files:
             for line in dict_reader:
                 q = str(line['CAMPAIGN_CONTENT']).strip()
                 remote_id = q[0:8] + '-' + q[8:12] + '-' + q[12:16] + '-' + q[16:20] + '-' + q[20:32]
-                if str(line['applied']).strip() != '':
+                if str(line['applied']).strip() != '' and str(line['applied']).strip() != 'NULL':
                     gone = int(str(line['applied']).strip()) + 1
                 else:
                     gone = 0
-                if str(line['issued']).strip() != '':
+                if str(line['issued']).strip() != ''and str(line['issued']).strip() != 'NULL':
                     accepted = int(str(line['issued']).strip()) + 1
                 else:
                     accepted = 0
-                if str(line['contacted']).strip() != '':
+                if str(line['contacted']).strip() != '' and str(line['contacted']).strip() != 'NULL':
                     phoned = int(str(line['contacted']).strip()) + 1
                 else:
                     phoned = 0
-                if str(line['LOAN_AMOUNT']).strip() != '':
+                if str(line['LOAN_AMOUNT']).strip() != '' and str(line['LOAN_AMOUNT']).strip() != 'NULL':
                     if float(str(line['LOAN_AMOUNT']).strip()) > 0:
                         loaned = 2
                     else:
