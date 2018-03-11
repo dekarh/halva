@@ -69,7 +69,7 @@ all_files.sort()
 for all_file in all_files:
     if all_file.endswith(".csv") and all_file.find('cards_95_') > -1:
         dbconn = MySQLConnection(**dbconfig)
-        # считаем количество одобреных заявок в базе, кроме договоров агентов, которые не участвут в срезе
+# считаем количество одобреных заявок в базе, кроме договоров агентов, которые не участвут в срезе
         sql = 'SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s AND status_code = 2' \
               ' AND (inserted_code NOT IN (SELECT code from saturn_fin.offices_staff WHERE partner_code = %s'
         partners = (DATE_HIDE, OUR_PARTNERS[0])
@@ -83,21 +83,18 @@ for all_file in all_files:
         cursor.execute(sql, partners)
         rows = cursor.fetchall()
         odobr_in_db = rows[0][0]
-
-        # считаем количество скрытых заявок в базе
+# считаем количество скрытых заявок в базе
         cursor = dbconn.cursor()
         cursor.execute('SELECT count(*) FROM saturn_fin.sovcombank_products WHERE status_hidden = 1')
         rows = cursor.fetchall()
         hidden_in_db = rows[0][0]
-
-        # заявки, без статусов: одобрено, (!!! отрицательный результат и отказ может стать одобреным !!!)
+# заявки, без статусов: одобрено, (!!! отрицательный результат и отказ может стать одобреным !!!)
         cursor = dbconn.cursor()
         cursor.execute(
-            'SELECT remote_id, inserted_code from saturn_fin.sovcombank_products WHERE status_code != 2 '
+            'SELECT remote_id, inserted_code, status_hidden from saturn_fin.sovcombank_products WHERE status_code != 2 '
                     'ORDER BY inserted_date DESC')
         bids_in_db = cursor.fetchall()
-
-        # создаем список не наших агентов с кол-вом одобренных и скрытых
+# создаем список не наших агентов с кол-вом получивших карту и скрытых
         for bid_in_db in bids_in_db:
             if (bid_in_db[1] not in another_agents) and (bid_in_db[1] not in our_agents):
                 cursor = dbconn.cursor()
@@ -181,7 +178,7 @@ for all_file in all_files:
 #                print(i, bid_in_db[0])
                 bid_in_xls = bids_in_xls[bid_in_db[0]]
                 bids_in_xls_db.append(bid_in_xls)
-                bids_in_db_agents.append(bid_in_db[1])
+                bids_in_db_agents.append([bid_in_db[1],bid_in_db[2]])
             except KeyError:
                 continue
             if bid_in_db[1] in our_agents:
@@ -201,7 +198,7 @@ for all_file in all_files:
         statuses = []
         st2 = []
         for i, bid_in_xls in enumerate(bids_in_xls_db):
-            if bids_in_db_agents[i] in our_agents:
+            if bids_in_db_agents[i][0] in our_agents:
                 statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
                                  bid_in_xls['visit_status_code'], 0, bid_in_xls['remote_id']))
             else:
