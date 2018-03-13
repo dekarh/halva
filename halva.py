@@ -73,8 +73,8 @@ for all_file in all_files:
         sql = 'SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s AND status_code = 2' \
               ' AND (inserted_code NOT IN (SELECT code from saturn_fin.offices_staff WHERE partner_code = %s'
         partners = (DATE_HIDE, OUR_PARTNERS[0])
-        for i, partner in enumerate(OUR_PARTNERS):
-            if i == 0:
+        for j, partner in enumerate(OUR_PARTNERS):
+            if j == 0:
                 continue
             sql += ' OR partner_code = %s '
             partners += (OUR_PARTNERS[i],)
@@ -93,7 +93,7 @@ for all_file in all_files:
         cursor.execute(
             'SELECT remote_id, inserted_code, status_hidden from saturn_fin.sovcombank_products WHERE status_code != 2 '
                     'ORDER BY inserted_date DESC')
-        bids_in_db = cursor.fetchall()
+        bids_in_db = cursor.fetchall()                         # bids_in_db[i][remote_id, inserted_code, status_hidden]
 # создаем список не наших агентов с кол-вом получивших карту и скрытых
         for bid_in_db in bids_in_db:
             if (bid_in_db[1] not in another_agents) and (bid_in_db[1] not in our_agents):
@@ -102,7 +102,7 @@ for all_file in all_files:
                                'AND inserted_code = %s), (SELECT count(*) FROM saturn_fin.sovcombank_products '
                                'WHERE status_code = 2 AND inserted_code = %s)', (bid_in_db[1],bid_in_db[1]))
                 rows = cursor.fetchall()
-                another_agents[bid_in_db[1]] = [rows[0][1], rows[0][0]]
+                another_agents[bid_in_db[1]] = [rows[0][1], rows[0][0]] # another_agents[i][к-во_получивших, к-во_скрытых]
         dbconn.close()
 
         print(datetime.now().strftime("%H:%M:%S"),'загружаем', all_file) # загружаем csv
@@ -173,12 +173,11 @@ for all_file in all_files:
         bids_in_xls_db = []
         bids_in_db_agents = []
         odobr_in_xls = 0
-        for i, bid_in_db in enumerate(bids_in_db):
+        for bid_in_db in bids_in_db:
             try:
-#                print(i, bid_in_db[0])
                 bid_in_xls = bids_in_xls[bid_in_db[0]]
                 bids_in_xls_db.append(bid_in_xls)
-                bids_in_db_agents.append([bid_in_db[1],bid_in_db[2]])
+                bids_in_db_agents.append([bid_in_db[1],bid_in_db[2]])  # bids_in_db_agents[i][inserted_code, status_hidden]
             except KeyError:
                 continue
             if bid_in_db[1] in our_agents:
@@ -192,28 +191,31 @@ for all_file in all_files:
             hidden_in_xls = odobr_in_xls
         elif hidden_in_xls < 0:
             hidden_in_xls = 0
-        print('Скрытых в БД:', round(100*hidden_in_db/odobr_in_db), '%. В файле', all_file, 'из',
+        print('Скрытых в БД:', round(100*hidden_in_db/odobr_in_db, 2), '%. В файле', all_file, 'из',
               odobr_in_xls, 'партнерских одобренных будет скрыто', hidden_in_xls)
 
         statuses = []
-        st2 = []
-        for i, bid_in_xls in enumerate(bids_in_xls_db):
-            if bids_in_db_agents[i][0] in our_agents:
+        st_2 = []
+        st_h = []
+        for j, bid_in_xls in enumerate(bids_in_xls_db):
+            if bids_in_db_agents[j][0] in our_agents:
                 statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
                                  bid_in_xls['visit_status_code'], 0, bid_in_xls['remote_id']))
             else:
                 if bid_in_xls['status'] == 2:
-                    st2.append(bid_in_xls['remote_id'])
+                    st_2.append(bid_in_xls['remote_id'])
+                    another_agents[bids_in_db_agents[j][0]][0] += 1
                 if bid_in_xls['status'] == 2 and hidden_in_xls > 0:
-                    if another_agents[bids_in_db_agents[i]][0] > 9:
-                        k_hidden_in_agent = another_agents[bids_in_db_agents[i]][1]/another_agents[bids_in_db_agents[i]][0]
+                    if another_agents[bids_in_db_agents[j][0]][0] > 9:
+                        k_hidden_in_agent = another_agents[bids_in_db_agents[j][0]][1]/another_agents[bids_in_db_agents[j][0]][0]
                     else:
                         k_hidden_in_agent = 1
                     if  k_hidden_in_agent < K_HIDDEN:
                         hidden_in_xls -= 1
                         statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
                                          bid_in_xls['visit_status_code'], 1, bid_in_xls['remote_id']))
-                        another_agents[bids_in_db_agents[i]][1] += 1
+                        another_agents[bids_in_db_agents[j][0]][1] += 1
+                        st_h.append(bid_in_xls['remote_id'])
                     else:
                         statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
                                          bid_in_xls['visit_status_code'], 0, bid_in_xls['remote_id']))
@@ -223,10 +225,10 @@ for all_file in all_files:
 
         gs =  0
         h_i = []
-        for i, st in enumerate(statuses):
+        for j, st in enumerate(statuses):
             if st[3] == 1:
                 gs +=1
-                h_i.append(i)
+                h_i.append(j)
 
         dbconn = MySQLConnection(**dbconfig)
         cursor = dbconn.cursor()
