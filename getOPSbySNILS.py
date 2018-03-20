@@ -137,11 +137,11 @@ if len(tuples_fin) > 0:
                   ' e_mail, phone, birth_date, fact_region_name, fact_city_name, inserted_date, inserted_code,' \
                   ' status_code) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
         cursor_fin.executemany(sql_fin, t_fin)
-        cursor_ops = dbconn_ops.cursor()                        # Статус "Загружено" (Бумага принята)
-        sql_ops = 'UPDATE saturn_crm.contracts SET exchanged = 1 WHERE client_id = %s'
-        cursor_ops.executemany(sql_ops, tuples_opses[i])
+#        cursor_ops = dbconn_ops.cursor()                        # Статус "Загружено" (Бумага принята)
+#        sql_ops = 'UPDATE saturn_crm.contracts SET exchanged = 1 WHERE client_id = %s'
+#        cursor_ops.executemany(sql_ops, tuples_opses[i])
         dbconn_fin.commit()
-        dbconn_ops.commit()
+#        dbconn_ops.commit()
 #if len(tuples_ops_err) > 0:
 #    cursor_ops = dbconn_ops.cursor()                        # Статус "Ошибка"
 #    sql_ops = 'UPDATE saturn_crm.contracts SET exchanged = 0 WHERE client_id = %s'
