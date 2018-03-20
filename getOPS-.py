@@ -43,12 +43,14 @@ dbconn_fin = MySQLConnection(**dbconfig_fin)
 
 
 cursor = dbconn_ops.cursor()
-sql_ops = 'SELECT cl.client_id, cl.p_surname, cl.p_name, cl.p_lastname, cl.email, ca.client_phone, cl.b_date, ' \
-          'cl.p_region, cl.d_region, cl.p_district, cl.p_place, cl.p_subplace, cl.d_district, cl.d_place, ' \
-          'cl.d_subplace, cl.`number` FROM saturn_crm.clients AS cl LEFT JOIN saturn_crm.contracts AS co ' \
-          'ON cl.client_id = co.client_id LEFT JOIN saturn_crm.callcenter AS ca ON ca.contract_id = co.id ' \
-          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND co.inserted_code = 9375 ' \
-          'AND co.status_code = 1 AND co.status_callcenter_code = 1 AND co.exchanged = 0 AND cl.client_id IS NOT NULL '\
+sql_ops = 'SELECT cl.client_id, cl.p_surname, cl.p_name, cl.p_lastname, cl.email, ca.client_phone, cl.b_date, cl.p_region, ' \
+          'cl.d_region, cl.p_district, cl.p_place, cl.p_subplace, cl.d_district, cl.d_place, cl.d_subplace, cl.`number` ' \
+          'FROM saturn_crm.clients AS cl ' \
+          'LEFT JOIN saturn_crm.contracts AS co ON cl.client_id = co.client_id ' \
+          'LEFT JOIN saturn_crm.callcenter AS ca ON ca.contract_id = co.id ' \
+          'LEFT JOIN saturn_crm.offices_staff AS st ON st.`code` = co.inserted_code ' \
+          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.partner_code = 442 AND co.status_code = 1 ' \
+          'AND co.status_callcenter_code = 1 AND co.exchanged = 0 AND cl.client_id IS NOT NULL ' \
           'ORDER BY co.client_id, ca.updated_date DESC'
 
 # 'AND ca.client_phone = 79241609997 ' \
