@@ -11,6 +11,7 @@ from openpyxl import Workbook
 
 from lib import read_config, lenl, s_minus, s, l, filter_rus_sp, filter_rus_minus
 
+# !!!! Обязательно первым значением "Имя файла"
 CONTROLLEDS = [
 'Имя файла',
 '4db004afec5211e7897e5254004b76e6',
