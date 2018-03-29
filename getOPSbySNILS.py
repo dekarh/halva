@@ -138,7 +138,9 @@ if len(tuples_fin) > 0:
                   ' status_code) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
         cursor_fin.executemany(sql_fin, t_fin)
 #        cursor_ops = dbconn_ops.cursor()                        # Статус "Загружено" (Бумага принята)
-#        sql_ops = 'UPDATE saturn_crm.contracts SET exchanged = 1 WHERE client_id = %s'
+#        sql_ops = 'UPDATE saturn_crm.contracts SET exchanged = 1' \
+#                  ' WHERE client_id = %s'
+##                  ', status_secure_code = 0, status_code = 1, status_callcenter_code = 1'
 #        cursor_ops.executemany(sql_ops, tuples_opses[i])
         dbconn_fin.commit()
 #        dbconn_ops.commit()
