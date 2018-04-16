@@ -44,7 +44,8 @@ dbconn_fin = MySQLConnection(**dbconfig_fin)
 
 cursor = dbconn_ops.cursor()
 sql_ops = 'SELECT cl.client_id, cl.p_surname, cl.p_name, cl.p_lastname, cl.email, ca.client_phone, cl.b_date, cl.p_region, ' \
-          'cl.d_region, cl.p_district, cl.p_place, cl.p_subplace, cl.d_district, cl.d_place, cl.d_subplace, cl.`number` ' \
+          'cl.d_region, cl.p_district, cl.p_place, cl.p_subplace, cl.d_district, cl.d_place, cl.d_subplace, cl.`number`, ' \
+          'cl.phone_personal_mobile, cl.phone_relative_mobile, cl.phone_home ' \
           'FROM saturn_crm.clients AS cl ' \
           'LEFT JOIN saturn_crm.contracts AS co ON cl.client_id = co.client_id ' \
           'LEFT JOIN saturn_crm.callcenter AS ca ON ca.contract_id = co.id ' \
@@ -71,6 +72,14 @@ bad_zayavka = 0
 for i, row in enumerate(rows):
     if last_id == row[0]:
         continue
+    phone = row[5]
+    if l(phone) == 0:
+        if l(row[16]) != 0:
+            phone = row[16]
+        elif l(row[17]) != 0:
+            phone = row[17]
+        elif l(row[18]) != 0:
+            phone = row[18]
     kladr_ok = True
     last_id = row[0]
     region_ch = 'd'
@@ -96,11 +105,11 @@ for i, row in enumerate(rows):
     if region_id == -1:
         bad_zayavka += 1
         if region == 'РЕГИОН НЕ УКАЗАН':
-            print(row[15], '"' + row[1], row[2], row[3] + '"', row[5], '""', '"- Регион не указан"')
+            print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '""', '"- Регион не указан"')
         elif not kladr_ok:
-            print(row[15], '"' + row[1], row[2], row[3] + '"', row[5], '"' + region + '"', '"- Пересохраните КЛАДР"')
+            print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Пересохраните КЛАДР"')
         else:
-            print(row[15], '"' + row[1], row[2], row[3] + '"', row[5], '"' + region + '"', '"- Регион не участвует в программе"')
+            print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Регион не участвует в программе"')
         tuples_ops_err.append((row[0],))
         continue
 
@@ -112,11 +121,18 @@ for i, row in enumerate(rows):
 
     if town.strip() == '':
         bad_zayavka += 1
-        print(row[15], '"' + row[1], row[2], row[3] +'"', row[5], '"' + region +'"', '"- Город не указан, пересохраните КЛАДР"')
+        print(row[15], '"' + row[1], row[2], row[3] +'"', phone, '"' + region +'"', '"- Город не указан, пересохраните КЛАДР"')
         tuples_ops_err.append((row[0],))
         continue
 
-    tuples_fin.append((row[0], row[1], row[2], row[3], row[4], row[5], row[6], HALVA_REGIONS[region_id],
+    cursor_chk = dbconn_fin.cursor()
+    cursor_chk.execute('SELECT remote_id, phone FROM sovcombank_products WHERE phone = %s', (phone,))
+    rows_chk = cursor_chk.fetchall()
+    if len(rows_chk) > 0:
+        print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Такой телефон уже есть в БД"')
+        continue
+
+    tuples_fin.append((row[0], row[1], row[2], row[3], row[4], phone, row[6], HALVA_REGIONS[region_id],
                  town, datetime.datetime.now(), 3090, 0))
     tuples_ops.append((row[0],))
     good_zayavka += 1
