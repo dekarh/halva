@@ -129,6 +129,7 @@ for i, row in enumerate(rows):
     cursor_chk.execute('SELECT remote_id, phone FROM sovcombank_products WHERE phone = %s', (phone,))
     rows_chk = cursor_chk.fetchall()
     if len(rows_chk) > 0:
+        bad_zayavka += 1
         print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Такой телефон уже есть в БД"')
         continue
 
