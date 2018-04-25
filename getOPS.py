@@ -7,7 +7,7 @@ import time
 import csv
 from mysql.connector import MySQLConnection, Error
 
-from lib import read_config, lenl, s_minus, s, l, filter_rus_sp, filter_rus_minus
+from lib import read_config, lenl, s_minus, s, l, fine_snils
 
 HALVA_REGIONS = ["АЛТАЙСКИЙ КРАЙ", "АМУРСКАЯ ОБЛАСТЬ", "АРХАНГЕЛЬСКАЯ ОБЛАСТЬ", "АСТРАХАНСКАЯ ОБЛАСТЬ",
                  "БЕЛГОРОДСКАЯ ОБЛАСТЬ",
@@ -117,11 +117,11 @@ for i, row in enumerate(rows):
     if region_id == -1:
         bad_zayavka += 1
         if region == 'РЕГИОН НЕ УКАЗАН':
-            print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '""', '"- Регион не указан"')
+            print('"' + fine_snils(row[15]) + '","' +  row[1], row[2], row[3] + '"', phone, '""', '"- Регион не указан"')
         elif not kladr_ok:
-            print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Пересохраните КЛАДР"')
+            print('"' + fine_snils(row[15]) + '","' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Пересохраните КЛАДР"')
         else:
-            print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '"' + region + '"',
+            print('"' + fine_snils(row[15]) + '","' + row[1], row[2], row[3] + '"', phone, '"' + region + '"',
                   '"- Регион не участвует в программе"')
         tuples_ops_err.append((row[0],))
         continue
@@ -134,7 +134,7 @@ for i, row in enumerate(rows):
 
     if town.strip() == '':
         bad_zayavka += 1
-        print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '"' + region + '"',
+        print('"' + fine_snils(row[15]) + '","' + row[1], row[2], row[3] + '"', phone, '"' + region + '"',
               '"- Город не указан, пересохраните КЛАДР"')
         tuples_ops_err.append((row[0],))
         continue
@@ -144,7 +144,7 @@ for i, row in enumerate(rows):
     rows_chk = cursor_chk.fetchall()
     if len(rows_chk) > 0:
         bad_zayavka += 1
-        print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Такой телефон уже есть в БД"')
+        print('"' + fine_snils(row[15]) + '","' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Такой телефон уже есть в БД"')
         continue
 
     tuples_fin.append((row[0], row[1], row[2], row[3], row[4], phone, row[6], HALVA_REGIONS[region_id],
