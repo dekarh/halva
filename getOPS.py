@@ -117,12 +117,14 @@ for i, row in enumerate(rows):
     if region_id == -1:
         bad_zayavka += 1
         if region == 'РЕГИОН НЕ УКАЗАН':
-            print('"' + fine_snils(row[15]) + '" "' +  row[1], row[2], row[3] + '"', phone, '""', '"- Регион не указан"')
+            print('"' + fine_snils(row[15]) + '" "' +  row[1], row[2], row[3] + '"', phone, '""',
+                  '"- Регион не указан"')
         elif not kladr_ok:
-            print('"' + fine_snils(row[15]) + '" "' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Пересохраните КЛАДР"')
+            print('"' + fine_snils(row[15]) + '" "' + row[1], row[2], row[3] + '"', phone, '"' + region + '"',
+                  '"- Пересохраните КЛАДР"')
         else:
             print('"' + fine_snils(row[15]) + '" "' + row[1], row[2], row[3] + '"', phone, '"' + region + '"',
-                  '"- Регион не участвует в программе"')
+                  '"- Ошибка в названии региона (пересохраните КЛАДР) или Регион не участвует в программе"')
         tuples_ops_err.append((row[0],))
         continue
 
@@ -144,7 +146,8 @@ for i, row in enumerate(rows):
     rows_chk = cursor_chk.fetchall()
     if len(rows_chk) > 0:
         bad_zayavka += 1
-        print('"' + fine_snils(row[15]) + '" "' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Такой телефон уже есть в БД"')
+        print('"' + fine_snils(row[15]) + '" "' + row[1], row[2], row[3] + '"', phone, '"' + region + '"',
+              '"- Такой телефон уже есть в БД"')
         continue
 
     tuples_fin.append((row[0], row[1], row[2], row[3], row[4], phone, row[6], HALVA_REGIONS[region_id],
