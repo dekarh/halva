@@ -165,6 +165,11 @@ tuples_opses.append(tuples_ops)
 
 print('\nОбработано: ', bad_zayavka + good_zayavka, '   загружено: ', good_zayavka, '   ошибки: ', bad_zayavka)
 
+dbconn_fin.close()
+dbconn_ops.close()
+dbconn_ops = MySQLConnection(**dbconfig_ops)
+dbconn_fin = MySQLConnection(**dbconfig_fin)
+
 if len(tuples_fin) > 0:
     for i, t_fin in enumerate(tuples_fins):
         cursor_fin = dbconn_fin.cursor()

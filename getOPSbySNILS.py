@@ -7,7 +7,7 @@ import time
 import csv
 from mysql.connector import MySQLConnection, Error
 
-from lib import read_config, lenl, s_minus, s, l, filter_rus_sp, filter_rus_minus
+from lib import read_config, s, l, fine_snils
 
 HALVA_REGIONS = ["АЛТАЙСКИЙ КРАЙ","АМУРСКАЯ ОБЛАСТЬ","АРХАНГЕЛЬСКАЯ ОБЛАСТЬ","АСТРАХАНСКАЯ ОБЛАСТЬ","БЕЛГОРОДСКАЯ ОБЛАСТЬ",
            "БРЯНСКАЯ ОБЛАСТЬ","ВЛАДИМИРСКАЯ ОБЛАСТЬ","ВОЛГОГРАДСКАЯ ОБЛАСТЬ","ВОЛОГОДСКАЯ ОБЛАСТЬ",
@@ -27,7 +27,7 @@ HALVA_REGIONS = ["АЛТАЙСКИЙ КРАЙ","АМУРСКАЯ ОБЛАСТЬ"
            "ХАНТЫ-МАНСИЙСКИЙ АВТОНОМНЫЙ ОКРУГ - ЮГРА","ЧЕЛЯБИНСКАЯ ОБЛАСТЬ","ЧУВАШСКАЯ РЕСПУБЛИКА",
            "ЧУКОТСКИЙ АВТОНОМНЫЙ ОКРУГ","ЯМАЛО-НЕНЕЦКИЙ АВТОНОМНЫЙ ОКРУГ","ЯРОСЛАВСКАЯ ОБЛАСТЬ","КУРГАНСКАЯ ОБЛАСТЬ"]
 
-HALVA_AGENT_ID = 3090
+HALVA_AGENT_ID = 2630
 
 def chuvak(is_chuvak):
     if s(is_chuvak).split(' ')[0] == 'ЧУВАШСКАЯ':
@@ -108,11 +108,11 @@ for i, row in enumerate(rows):
     if region_id == -1:
         bad_zayavka += 1
         if region == 'РЕГИОН НЕ УКАЗАН':
-            print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '""', '"- Регион не указан"')
+            print('"' + fine_snils(row[15]) + '" "' + row[1], row[2], row[3] + '"', phone, '""', '"- Регион не указан"')
         elif not kladr_ok:
-            print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Пересохраните КЛАДР"')
+            print('"' + fine_snils(row[15]) + '" "' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Пересохраните КЛАДР"')
         else:
-            print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Регион не участвует в программе"')
+            print('"' + fine_snils(row[15]) + '" "' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Регион не участвует в программе"')
         tuples_ops_err.append((row[0],))
         continue
 
@@ -124,7 +124,7 @@ for i, row in enumerate(rows):
 
     if town.strip() == '':
         bad_zayavka += 1
-        print(row[15], '"' + row[1], row[2], row[3] +'"', phone, '"' + region +'"', '"- Город не указан, пересохраните КЛАДР"')
+        print('"' + fine_snils(row[15]) + '" "' + row[1], row[2], row[3] +'"', phone, '"' + region +'"', '"- Город не указан, пересохраните КЛАДР"')
         tuples_ops_err.append((row[0],))
         continue
 
@@ -132,7 +132,7 @@ for i, row in enumerate(rows):
     cursor_chk.execute('SELECT remote_id, phone FROM sovcombank_products WHERE phone = %s', (phone,))
     rows_chk = cursor_chk.fetchall()
     if len(rows_chk) > 0:
-        print(row[15], '"' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Такой телефон уже есть в БД"')
+        print('"' + fine_snils(row[15]) + '" "' + row[1], row[2], row[3] + '"', phone, '"' + region + '"', '"- Такой телефон уже есть в БД"')
         continue
 
     has_in_db = False
