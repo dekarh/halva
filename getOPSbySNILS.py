@@ -50,8 +50,8 @@ sql_ops = 'SELECT cl.client_id, cl.p_surname, cl.p_name, cl.p_lastname, cl.email
           'cl.d_subplace, cl.`number`, cl.phone_personal_mobile, cl.phone_relative_mobile, cl.phone_home ' \
           'FROM saturn_crm.clients AS cl LEFT JOIN saturn_crm.contracts AS co ' \
           'ON cl.client_id = co.client_id LEFT JOIN saturn_crm.callcenter AS ca ON ca.contract_id = co.id ' \
-          'WHERE cl.number IN (' \
-          '99999999999' \
+          'WHERE cl.client_id IN (' \            
+          '"00000000-0000-0000-0000-000000000000"' \
           ') ORDER BY co.client_id, ca.updated_date DESC'
 
 #          'WHERE cl.number IN (11439730145, 13864400363, 15238151546)' \

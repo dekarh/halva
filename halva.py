@@ -13,13 +13,13 @@ from mysql.connector import MySQLConnection, Error
 from lib import read_config, lenl, s_minus, s, l, filter_rus_sp, filter_rus_minus
 
 # Партнеры, по которым не надо обрезать !!! MIN - 1 шт !!!
-OUR_PARTNERS = [45,191,234]
+OUR_PARTNERS = [45,191,234,135,220,150]
 # Коэффициент обрезки
 K_HIDDEN = 0.1
 # Дата начала обрезки
 DATE_HIDE = '2018-01-31'
 # До какой даты ставить статус "Отрицательный результат"
-DATE_END_OTKAZ = '2017-12-31'
+DATE_END_OTKAZ = '2018-03-31'
 
 
 all_files = os.listdir(path=".")
