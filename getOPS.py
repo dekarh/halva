@@ -154,10 +154,10 @@ for i, row in enumerate(rows):
                        town, datetime.datetime.now(), 3090, 0))
     tuples_ops.append((row[0],))
     good_zayavka += 1
-    if len(tuples_fin) > 999:
+    if len(tuples_fin) > 99:
         tuples_fins.append(tuples_fin)
         tuples_fin = []
-    if len(tuples_ops) > 999:
+    if len(tuples_ops) > 99:
         tuples_opses.append(tuples_ops)
         tuples_ops = []
 tuples_fins.append(tuples_fin)

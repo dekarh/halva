@@ -50,8 +50,8 @@ sql_ops = 'SELECT cl.client_id, cl.p_surname, cl.p_name, cl.p_lastname, cl.email
           'cl.d_subplace, cl.`number`, cl.phone_personal_mobile, cl.phone_relative_mobile, cl.phone_home ' \
           'FROM saturn_crm.clients AS cl LEFT JOIN saturn_crm.contracts AS co ' \
           'ON cl.client_id = co.client_id LEFT JOIN saturn_crm.callcenter AS ca ON ca.contract_id = co.id ' \
-          'WHERE cl.client_id IN (' \            
-          '"00000000-0000-0000-0000-000000000000"' \
+          'WHERE cl.client_id IN (' \
+          '"cb53bd81-64d3-11e8-8416-5254004b76e6","c86e16cd-6760-11e8-8416-5254004b76e6","6efebf82-67f3-11e8-8416-5254004b76e6","6d44cd7b-6801-11e8-8416-5254004b76e6","8ccd546b-68e8-11e8-8416-5254004b76e6","4470e5c7-68f5-11e8-8416-5254004b76e6","901eca83-69b7-11e8-8416-5254004b76e6","63d6b80e-69b8-11e8-8416-5254004b76e6","e561f96f-6a1b-11e8-8416-5254004b76e6","d4467a45-6a45-11e8-8416-5254004b76e6","90c350ab-6a48-11e8-8416-5254004b76e6","e092286f-6a4a-11e8-8416-5254004b76e6","daee6710-6a8e-11e8-8416-5254004b76e6","16478926-6b3d-11e8-8416-5254004b76e6","98e484a6-6d32-11e8-8416-5254004b76e6","61bf00f7-6d7c-11e8-8416-5254004b76e6","ddb41f57-6d7d-11e8-8416-5254004b76e6","0141050d-6d87-11e8-8416-5254004b76e6","a90d232c-6e3b-11e8-8416-5254004b76e6","deb6c5f2-6e3c-11e8-8416-5254004b76e6","cd342983-6e45-11e8-8416-5254004b76e6","b42f268e-78ad-11e8-828b-5254004b76e6","e79a2c9c-7972-11e8-828b-5254004b76e6","10fb9e7f-7a08-11e8-828b-5254004b76e6"' \
           ') ORDER BY co.client_id, ca.updated_date DESC'
 
 #          'WHERE cl.number IN (11439730145, 13864400363, 15238151546)' \
@@ -151,13 +151,13 @@ for i, row in enumerate(rows):
 
     tuples_ops.append((row[0],))
     good_zayavka += 1
-    if len(tuples_fin) > 999:
+    if len(tuples_fin) > 99:
         tuples_fins.append(tuples_fin)
         tuples_fin = []
-    if len(tuples_fin_upd) > 999:
+    if len(tuples_fin_upd) > 99:
         tuples_fins_upd.append(tuples_fin_upd)
         tuples_fin_upd = []
-    if len(tuples_ops) > 999:
+    if len(tuples_ops) > 99:
         tuples_opses.append(tuples_ops)
         tuples_ops = []
 tuples_fins.append(tuples_fin)
