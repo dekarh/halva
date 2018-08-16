@@ -151,7 +151,7 @@ for i, row in enumerate(rows):
         continue
 
     tuples_fin.append((row[0], row[1], row[2], row[3], row[4], phone, row[6], HALVA_REGIONS[region_id],
-                       town, datetime.datetime.now(), 3090, 0))
+                       town, datetime.datetime.now(), 3090, 0, 1))
     tuples_ops.append((row[0],))
     good_zayavka += 1
     if len(tuples_fin) > 99:
@@ -175,7 +175,7 @@ if len(tuples_fin) > 0:
         cursor_fin = dbconn_fin.cursor()
         sql_fin = 'INSERT INTO saturn_fin.sovcombank_products(remote_id, first_name, last_name, middle_name,' \
                   ' e_mail, phone, birth_date, fact_region_name, fact_city_name, inserted_date, inserted_code,' \
-                  ' status_code) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                  ' status_code, enable_exchange) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
         cursor_fin.executemany(sql_fin, t_fin)
         cursor_ops = dbconn_ops.cursor()  # Статус "Загружено" (Бумага принята)
         sql_ops = 'UPDATE saturn_crm.contracts SET exchanged = 1 WHERE client_id = %s'
