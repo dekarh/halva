@@ -56,13 +56,13 @@ dbconn_fin = MySQLConnection(**dbconfig_fin)
 cursor = dbconn_ops.cursor()
 sql_ops = 'SELECT cl.client_id, cl.p_surname, cl.p_name, cl.p_lastname, cl.email, ca.client_phone, cl.b_date, cl.p_region, ' \
           'cl.d_region, cl.p_district, cl.p_place, cl.p_subplace, cl.d_district, cl.d_place, cl.d_subplace, cl.`number`, ' \
-          'cl.phone_personal_mobile, cl.phone_relative_mobile, cl.phone_home ' \
+          'cl.phone_personal_mobile, cl.phone_relative_mobile, cl.phone_home, co.status_code  ' \
           'FROM saturn_crm.clients AS cl ' \
           'LEFT JOIN saturn_crm.contracts AS co ON cl.client_id = co.client_id ' \
           'LEFT JOIN saturn_crm.callcenter AS ca ON ca.contract_id = co.id ' \
           'LEFT JOIN saturn_crm.offices_staff AS st ON st.`code` = co.inserted_code ' \
-          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.partner_code = 442 AND co.status_code = 1 ' \
-          'AND co.status_callcenter_code = 1 AND co.exchanged = 0 AND cl.client_id IS NOT NULL ' \
+          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.partner_code = 442 AND (co.status_code = 1 OR' \
+          ' co.status_code = 5) AND co.status_callcenter_code = 1 AND co.exchanged = 0 AND cl.client_id IS NOT NULL ' \
           'ORDER BY co.client_id, ca.updated_date DESC'
 
 #          'WHERE cl.number IN (11439730145, 13864400363, 15238151546)' \
@@ -79,11 +79,19 @@ tuples_ops = []
 tuples_opses = []
 tuples_ops_err = []
 good_zayavka = 0
+all_alt = 0
+good_alt = 0
+all_soc= 0
+good_soc = 0
 bad_zayavka = 0
 
 for i, row in enumerate(rows):
     if last_id == row[0]:
         continue
+    if row[19] == 1:
+        all_soc += 1
+    else:
+        all_alt += 1
     phone = row[5]
     if l(phone) == 0:
         if l(row[16]) != 0:
@@ -150,20 +158,27 @@ for i, row in enumerate(rows):
               '"- Такой телефон уже есть в БД"')
         continue
 
-    tuples_fin.append((row[0], row[1], row[2], row[3], row[4], phone, row[6], HALVA_REGIONS[region_id],
-                       town, datetime.datetime.now(), 3090, 0, 1))
+    if row[19] == 1:
+        tuples_fin.append((row[0], row[1], row[2], row[3], row[4], phone, row[6], HALVA_REGIONS[region_id],
+                                    town, datetime.datetime.now(), 3090, 0, 1))
+        good_soc += 1
+    else:
+        tuples_fin.append((row[0], row[1], row[2], row[3], row[4], phone, row[6], HALVA_REGIONS[region_id],
+                                    town, datetime.datetime.now(), 3818, 0, 1))
+        good_alt += 1
     tuples_ops.append((row[0],))
     good_zayavka += 1
     if len(tuples_fin) > 99:
-        tuples_fins.append(tuples_fin)
-        tuples_fin = []
+         tuples_fins.append(tuples_fin)
+         tuples_fin = []
     if len(tuples_ops) > 99:
         tuples_opses.append(tuples_ops)
         tuples_ops = []
 tuples_fins.append(tuples_fin)
 tuples_opses.append(tuples_ops)
 
-print('\nОбработано: ', bad_zayavka + good_zayavka, '   загружено: ', good_zayavka, '   ошибки: ', bad_zayavka)
+print('\nОбработано:', bad_zayavka + good_zayavka,'загружено:', good_zayavka, 'ошибки: ', bad_zayavka)
+print('Социнвест всего:', all_soc,'загружено:', good_soc, '    Альтернатива всего:', all_alt, 'загружено:', good_alt)
 
 dbconn_fin.close()
 dbconn_ops.close()
