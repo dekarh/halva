@@ -15,7 +15,7 @@ from lib import read_config, lenl, s_minus, s, l, filter_rus_sp, filter_rus_minu
 # Партнеры, по которым не надо обрезать !!! MIN - 1 шт !!!
 OUR_PARTNERS = [45,191,234,135,220,150]
 # Коэффициент обрезки
-K_HIDDEN = 0.1
+K_HIDDEN = 0
 # Дата начала обрезки
 DATE_HIDE = '2018-01-31'
 # До какой даты ставить статус "Отрицательный результат"
@@ -229,6 +229,10 @@ for all_file in all_files:
             if st[3] == 1:
                 gs +=1
                 h_i.append(j)
+
+        print('Скрытых в Халве:',gs)
+#        print('Прерываюсь !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+#        sys.exit()
 
         dbconn = MySQLConnection(**dbconfig)
         cursor = dbconn.cursor()
