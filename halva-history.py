@@ -74,6 +74,10 @@ for all_file in all_files:
                                 loaned = 1
                         else:
                             loaned = 0
+                        if str(line['ACTIVATED']).strip() != '' and str(line['ACTIVATED']).strip() != 'NULL':
+                            activated = int(str(line['ACTIVATED']).strip()) + 1
+                        else:
+                            activated = 0
                         if gone == 2:
                             visit_status_code = 1
                             callcenter_status_code = 3
@@ -87,6 +91,8 @@ for all_file in all_files:
                             status = 2
                         else:
                             status = 1
+                        if activated == 2:
+                            status = 6
                         statuses[controlled] = status
         input_file.close()
         excel_line = []

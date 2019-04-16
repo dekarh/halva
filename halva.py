@@ -12,15 +12,10 @@ from mysql.connector import MySQLConnection, Error
 
 from lib import read_config, lenl, s_minus, s, l, filter_rus_sp, filter_rus_minus
 
-# Партнеры, по которым не надо обрезать !!! MIN - 1 шт !!!
-OUR_PARTNERS = [45,191,234,135,220,150]
-# Коэффициент обрезки
-K_HIDDEN = 0
-# Дата начала обрезки
-DATE_HIDE = '2018-01-31'
+# Статистика с этой даты
+DATE_START_COUNT = datetime(2018,8,1)
 # До какой даты ставить статус "Отрицательный результат"
 DATE_END_OTKAZ = '2018-03-31'
-
 
 all_files = os.listdir(path=".")
 
@@ -47,63 +42,43 @@ if not has_files:
     sys.exit()
 
 dbconfig = read_config(filename='halva.ini', section='SaturnFIN')
-
-# агенты, которые не участвут в срезе
-sql = 'SELECT code from saturn_fin.offices_staff WHERE partner_code = %s'
-partners = (OUR_PARTNERS[0],)
-our_agents = []
-for i, partner in enumerate(OUR_PARTNERS):
-    if i == 0:
-        continue
-    sql += ' OR partner_code = %s'
-    partners += (OUR_PARTNERS[i],)
 dbconn = MySQLConnection(**dbconfig)
+
+# считаем количество одобреных заявок в базе
+statistics_before = {}
+sql = 'SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s AND status_code = 2'
 cursor = dbconn.cursor()
-cursor.execute(sql, partners)
+cursor.execute(sql, (DATE_START_COUNT,))
 rows = cursor.fetchall()
-for row in rows:
-    our_agents.append(row[0])
-another_agents = {}
+statistics_before['Одобренные'] = rows[0][0]
+# считаем количество активированых карт в базе
+sql = 'SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s AND status_code = 6'
+cursor = dbconn.cursor()
+cursor.execute(sql, (DATE_START_COUNT,))
+rows = cursor.fetchall()
+statistics_before['Активированные'] = rows[0][0]
+# считаем количество скрытых заявок в базе
+cursor = dbconn.cursor()
+cursor.execute('SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s '
+               'AND status_hidden = 1', (DATE_START_COUNT,))
+rows = cursor.fetchall()
+statistics_before['Скрытые'] = rows[0][0]
+# заявки, без статусов: одобрено, активировано(!!! отрицательный результат и отказ может стать одобреным !!!)
+cursor = dbconn.cursor()
+cursor.execute('SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s '
+               'AND status_code != 2 AND status_code != 6', (DATE_START_COUNT,))
+rows = cursor.fetchall()
+statistics_before['НЕ одобренные и НЕ активированные'] = rows[0][0]
+
+print('Одобренные\t', 'Активированные\t', 'Скрытые\t', 'НЕ одобренные и НЕ активированные')
+print(statistics_before['Одобренные'], '\t\t', statistics_before['Активированные'], '\t\t\t\t',
+      statistics_before['Скрытые'], '\t\t', statistics_before['НЕ одобренные и НЕ активированные'])
 
 all_files.sort()
 for all_file in all_files:
+    statistics_in_csv = {}
+    statistics_in_csv['Скрытые'] = 0
     if all_file.endswith(".csv") and all_file.find('cards_95_') > -1:
-        dbconn = MySQLConnection(**dbconfig)
-# считаем количество одобреных заявок в базе, кроме договоров агентов, которые не участвут в срезе
-        sql = 'SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s AND status_code = 2' \
-              ' AND (inserted_code NOT IN (SELECT code from saturn_fin.offices_staff WHERE partner_code = %s'
-        partners = (DATE_HIDE, OUR_PARTNERS[0])
-        for j, partner in enumerate(OUR_PARTNERS):
-            if j == 0:
-                continue
-            sql += ' OR partner_code = %s '
-            partners += (OUR_PARTNERS[i],)
-        sql += '))'
-        cursor = dbconn.cursor()
-        cursor.execute(sql, partners)
-        rows = cursor.fetchall()
-        odobr_in_db = rows[0][0]
-# считаем количество скрытых заявок в базе
-        cursor = dbconn.cursor()
-        cursor.execute('SELECT count(*) FROM saturn_fin.sovcombank_products WHERE status_hidden = 1')
-        rows = cursor.fetchall()
-        hidden_in_db = rows[0][0]
-# заявки, без статусов: одобрено, (!!! отрицательный результат и отказ может стать одобреным !!!)
-        cursor = dbconn.cursor()
-        cursor.execute(
-            'SELECT remote_id, inserted_code, status_hidden from saturn_fin.sovcombank_products WHERE status_code != 2 '
-                    'ORDER BY inserted_date DESC')
-        bids_in_db = cursor.fetchall()                         # bids_in_db[i][remote_id, inserted_code, status_hidden]
-# создаем список не наших агентов с кол-вом получивших карту и скрытых
-        for bid_in_db in bids_in_db:
-            if (bid_in_db[1] not in another_agents) and (bid_in_db[1] not in our_agents):
-                cursor = dbconn.cursor()
-                cursor.execute('SELECT (SELECT count(*) FROM saturn_fin.sovcombank_products WHERE status_hidden = 1 '
-                               'AND inserted_code = %s), (SELECT count(*) FROM saturn_fin.sovcombank_products '
-                               'WHERE status_code = 2 AND inserted_code = %s)', (bid_in_db[1],bid_in_db[1]))
-                rows = cursor.fetchall()
-                another_agents[bid_in_db[1]] = [rows[0][1], rows[0][0]] # another_agents[i][к-во_получивших, к-во_скрытых]
-        dbconn.close()
 
         print(datetime.now().strftime("%H:%M:%S"),'загружаем', all_file) # загружаем csv
         updates = []
@@ -132,9 +107,10 @@ for all_file in all_files:
                         loaned = 1
                 else:
                     loaned = 0
-                updates.append(remote_id)
-#                updates.append([remote_id, gone, accepted, phoned, str(line['PARTNER_EXTERNAL_ID']),
-#                                str(line['ID_POTENTIAL_CUSTOMER']), str(line['DT_APPLICATION_START'])])
+                if str(line['ACTIVATED']).strip() != '' and str(line['ACTIVATED']).strip() != 'NULL':
+                    activated = int(str(line['ACTIVATED']).strip()) + 1
+                else:
+                    activated = 0
                 if phoned == 2:
                     callcenter_status_code = 3
                 elif phoned == 1:
@@ -150,15 +126,38 @@ for all_file in all_files:
                     visit_status_code = 3
                 if accepted == 1 and gone == 2 and loaned == 1:
                     status = 3
+                    if statistics_in_csv.get('НЕ одобренные и НЕ активированные'):
+                        statistics_in_csv['НЕ одобренные и НЕ активированные'] +=1
+                    else:
+                        statistics_in_csv['НЕ одобренные и НЕ активированные'] = 1
                 elif accepted == 2:
                     status = 2
+                    if statistics_in_csv.get('Одобренные'):
+                        statistics_in_csv['Одобренные'] +=1
+                    else:
+                        statistics_in_csv['Одобренные'] = 1
                 else:
                     status = 1
-                bids_in_xls[remote_id] = {'remote_id' : remote_id, 'status': status, 'callcenter_status_code': callcenter_status_code,
-                                       'visit_status_code': visit_status_code}
+                    if statistics_in_csv.get('НЕ одобренные и НЕ активированные'):
+                        statistics_in_csv['НЕ одобренные и НЕ активированные'] +=1
+                    else:
+                        statistics_in_csv['НЕ одобренные и НЕ активированные'] = 1
+                if activated == 2:
+                    status = 6
+                    if statistics_in_csv.get('Активированные'):
+                        statistics_in_csv['Активированные'] +=1
+                    else:
+                        statistics_in_csv['Активированные'] = 1
+                bids_in_xls[remote_id] = {'remote_id' : remote_id,
+                                          'status': status,
+                                          'callcenter_status_code': callcenter_status_code,
+                                          'visit_status_code': visit_status_code,}
+                updates.append((status, callcenter_status_code, visit_status_code, remote_id))
         input_file.close()
+        print(statistics_in_csv['Одобренные'], '\t\t', statistics_in_csv['Активированные'], '\t\t\t\t',
+              statistics_in_csv['Скрытые'], '\t\t', statistics_in_csv['НЕ одобренные и НЕ активированные'])
 
-#        has_doubles = []
+        #        has_doubles = []
 #        for i, up_i in enumerate(updates):                # проверка на дубли
 #            for j, up_j in enumerate(updates):
 #                if i == j:
@@ -169,77 +168,11 @@ for all_file in all_files:
 #            print(len(has_doubles), 'дублей в файле', all_file, '- загрузка невозможна' )
 #            continue
 
-        bid_in_xls = {}                                     # Сколько есть БД из одобренных
-        bids_in_xls_db = []
-        bids_in_db_agents = []
-        odobr_in_xls = 0
-        for bid_in_db in bids_in_db:
-            try:
-                bid_in_xls = bids_in_xls[bid_in_db[0]]
-                bids_in_xls_db.append(bid_in_xls)
-                bids_in_db_agents.append([bid_in_db[1],bid_in_db[2]])  # bids_in_db_agents[i][inserted_code, status_hidden]
-            except KeyError:
-                continue
-            if bid_in_db[1] in our_agents:
-                q = 0
-            else:
-                if bid_in_xls['status'] == 2 :
-                    odobr_in_xls += 1
-
-        hidden_in_xls = round((odobr_in_db + odobr_in_xls) * K_HIDDEN - hidden_in_db)
-        if hidden_in_xls > odobr_in_xls:
-            hidden_in_xls = odobr_in_xls
-        elif hidden_in_xls < 0:
-            hidden_in_xls = 0
-        print('Скрытых в БД:', round(100*hidden_in_db/odobr_in_db, 2), '%. В файле', all_file, 'из',
-              odobr_in_xls, 'партнерских одобренных будет скрыто', hidden_in_xls)
-
-        statuses = []
-        st_2 = []
-        st_h = []
-        for j, bid_in_xls in enumerate(bids_in_xls_db):
-            if bids_in_db_agents[j][0] in our_agents:
-                statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
-                                 bid_in_xls['visit_status_code'], 0, bid_in_xls['remote_id']))
-            else:
-                if bid_in_xls['status'] == 2:
-                    st_2.append(bid_in_xls['remote_id'])
-                    another_agents[bids_in_db_agents[j][0]][0] += 1
-                if bid_in_xls['status'] == 2 and hidden_in_xls > 0:
-                    if another_agents[bids_in_db_agents[j][0]][0] > 9:
-                        k_hidden_in_agent = another_agents[bids_in_db_agents[j][0]][1]/another_agents[bids_in_db_agents[j][0]][0]
-                    else:
-                        k_hidden_in_agent = 1
-                    if  k_hidden_in_agent < K_HIDDEN:
-                        hidden_in_xls -= 1
-                        statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
-                                         bid_in_xls['visit_status_code'], 1, bid_in_xls['remote_id']))
-                        another_agents[bids_in_db_agents[j][0]][1] += 1
-                        st_h.append(bid_in_xls['remote_id'])
-                    else:
-                        statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
-                                         bid_in_xls['visit_status_code'], 0, bid_in_xls['remote_id']))
-                else:
-                    statuses.append((bid_in_xls['status'], bid_in_xls['callcenter_status_code'],
-                                     bid_in_xls['visit_status_code'], 0, bid_in_xls['remote_id']))
-
-        gs =  0
-        h_i = []
-        for j, st in enumerate(statuses):
-            if st[3] == 1:
-                gs +=1
-                h_i.append(j)
-
-        print('Скрытых в Халве:',gs)
-#        print('Прерываюсь !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-#        sys.exit()
 
         dbconn = MySQLConnection(**dbconfig)
         cursor = dbconn.cursor()
-#        cursor.execute('UPDATE saturn_fin.sovcombank_products SET status_code = %s, callcenter_status_code = %s, '
-#                           'visit_status_code = %s, status_hidden = %s WHERE remote_id = %s', statuses[h_i[0]])
         cursor.executemany('UPDATE saturn_fin.sovcombank_products SET status_code = %s, callcenter_status_code = %s, '
-                           'visit_status_code = %s, status_hidden = %s WHERE remote_id = %s', statuses)
+                           'visit_status_code = %s WHERE remote_id = %s', updates)
         dbconn.commit()
 
         try:
@@ -247,6 +180,42 @@ for all_file in all_files:
         except OSError as e:  # errno.ENOENT = no such file or directory
             if e.errno != OSError.errno.ENOENT:
                 print('Ошибка при переименовании файла', e)
+
+# считаем количество одобреных заявок в базе
+statistics_after = {}
+sql = 'SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s AND status_code = 2'
+cursor = dbconn.cursor()
+cursor.execute(sql, (DATE_START_COUNT,))
+rows = cursor.fetchall()
+statistics_after['Одобренные'] = rows[0][0]
+# считаем количество активированых карт в базе
+sql = 'SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s AND status_code = 6'
+cursor = dbconn.cursor()
+cursor.execute(sql, (DATE_START_COUNT,))
+rows = cursor.fetchall()
+statistics_after['Активированные'] = rows[0][0]
+# считаем количество скрытых заявок в базе
+cursor = dbconn.cursor()
+cursor.execute('SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s '
+               'AND status_hidden = 1', (DATE_START_COUNT,))
+rows = cursor.fetchall()
+statistics_after['Скрытые'] = rows[0][0]
+# заявки, без статусов: одобрено, активировано(!!! отрицательный результат и отказ может стать одобреным !!!)
+cursor = dbconn.cursor()
+cursor.execute('SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s '
+               'AND status_code != 2 AND status_code != 6', (DATE_START_COUNT,))
+rows = cursor.fetchall()
+statistics_after['НЕ одобренные и НЕ активированные'] = rows[0][0]
+
+print('Стало:')
+print(statistics_after['Одобренные'], '\t\t', statistics_after['Активированные'], '\t\t\t\t',
+      statistics_after['Скрытые'], '\t\t', statistics_after['НЕ одобренные и НЕ активированные'])
+print('ИЗМЕНЕНИЯ:')
+print(statistics_after['Одобренные'] - statistics_before['Одобренные'], '\t\t',
+      statistics_after['Активированные'] - statistics_before['Активированные'], '\t\t\t\t',
+      statistics_after['Скрытые'] - statistics_before['Скрытые'], '\t\t',
+      statistics_after['НЕ одобренные и НЕ активированные'] - statistics_before['НЕ одобренные и НЕ активированные'])
+
 
 cursor = dbconn.cursor()
 cursor.execute('UPDATE saturn_fin.sovcombank_products SET status_code = 5 WHERE status_code != 2 AND status_code != 3 '
