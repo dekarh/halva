@@ -14,7 +14,7 @@ from lib import read_config, lenl, s_minus, s, l, filter_rus_sp, filter_rus_minu
 # !!!! Обязательно первым значением "Имя файла"
 CONTROLLEDS = [
 'Имя файла',
-'449991c6948611e89b445254004b76e6'
+'4d64ad43f59111e88d5d000c290cfc84'
 ]
 
 all_files = os.listdir(path=".")

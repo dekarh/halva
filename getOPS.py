@@ -53,6 +53,8 @@ dbconn_ops = MySQLConnection(**dbconfig_ops)
 dbconfig_fin = read_config(filename='halva.ini', section='SaturnFIN')
 dbconn_fin = MySQLConnection(**dbconfig_fin)
 
+dbconn_fin.commit()
+
 cursor = dbconn_ops.cursor()
 sql_ops = 'SELECT cl.client_id, cl.p_surname, cl.p_name, cl.p_lastname, cl.email, ca.client_phone, cl.b_date, cl.p_region, ' \
           'cl.d_region, cl.p_district, cl.p_place, cl.p_subplace, cl.d_district, cl.d_place, cl.d_subplace, cl.`number`, ' \
@@ -61,14 +63,17 @@ sql_ops = 'SELECT cl.client_id, cl.p_surname, cl.p_name, cl.p_lastname, cl.email
           'LEFT JOIN saturn_crm.contracts AS co ON cl.client_id = co.client_id ' \
           'LEFT JOIN saturn_crm.callcenter AS ca ON ca.contract_id = co.id ' \
           'LEFT JOIN saturn_crm.offices_staff AS st ON st.`code` = co.inserted_code ' \
-          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.office_code = 1562 AND (co.status_code = 1 OR' \
+          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.partner_code = 442 AND (co.status_code = 1 OR' \
           ' co.status_code = 5) AND co.status_callcenter_code = 1 AND co.exchanged = 0 AND cl.client_id IS NOT NULL ' \
           'ORDER BY co.client_id, ca.updated_date DESC'
 
-# Чтобы все агенты из партнера Халва (поменял на всех агентов из офиса "Банк"):
+# История:
 #          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.partner_code = 442 AND (co.status_code = 1 OR' \
+#          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.office_code = 1562 AND (co.status_code = 1 OR' \
+# Чтобы все агенты из партнера Халва (поменял на всех агентов из офисов "Банк" и "Разница во времени"):
+#          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.office_code IN (1562, 1802) AND (co.status_code = 1 OR' \
 
-#          'WHERE cl.number IN (11439730145, 13864400363, 15238151546)' \
+    #          'WHERE cl.number IN (11439730145, 13864400363, 15238151546)' \
 # 'AND ca.client_phone = 79241609997 ' \
 # 'AND co.external_status_code = 3 ' \
 
