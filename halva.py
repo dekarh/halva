@@ -71,7 +71,7 @@ rows = cursor.fetchall()
 statistics_before['НЕ одобренные и НЕ активированные'] = rows[0][0]
 
 print('Одобренные\t', 'Активированные\t', 'Скрытые\t', 'НЕ одобренные и НЕ активированные')
-print(statistics_before['Одобренные'], '\t\t', statistics_before['Активированные'], '\t\t\t\t',
+print(statistics_before['Одобренные'], '\t\t', statistics_before['Активированные'], '\t\t',
       statistics_before['Скрытые'], '\t\t', statistics_before['НЕ одобренные и НЕ активированные'])
 
 all_files.sort()
@@ -154,7 +154,7 @@ for all_file in all_files:
                                           'visit_status_code': visit_status_code,}
                 updates.append((status, callcenter_status_code, visit_status_code, remote_id))
         input_file.close()
-        print(statistics_in_csv['Одобренные'], '\t\t', statistics_in_csv['Активированные'], '\t\t\t\t',
+        print(statistics_in_csv['Одобренные'], '\t\t', statistics_in_csv['Активированные'], '\t\t',
               statistics_in_csv['Скрытые'], '\t\t', statistics_in_csv['НЕ одобренные и НЕ активированные'])
 
         #        has_doubles = []
@@ -208,11 +208,11 @@ rows = cursor.fetchall()
 statistics_after['НЕ одобренные и НЕ активированные'] = rows[0][0]
 
 print('Стало:')
-print(statistics_after['Одобренные'], '\t\t', statistics_after['Активированные'], '\t\t\t\t',
+print(statistics_after['Одобренные'], '\t\t', statistics_after['Активированные'], '\t\t',
       statistics_after['Скрытые'], '\t\t', statistics_after['НЕ одобренные и НЕ активированные'])
 print('ИЗМЕНЕНИЯ:')
 print(statistics_after['Одобренные'] - statistics_before['Одобренные'], '\t\t',
-      statistics_after['Активированные'] - statistics_before['Активированные'], '\t\t\t\t',
+      statistics_after['Активированные'] - statistics_before['Активированные'], '\t\t',
       statistics_after['Скрытые'] - statistics_before['Скрытые'], '\t\t',
       statistics_after['НЕ одобренные и НЕ активированные'] - statistics_before['НЕ одобренные и НЕ активированные'])
 

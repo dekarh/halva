@@ -63,9 +63,9 @@ sql_ops = 'SELECT cl.client_id, cl.p_surname, cl.p_name, cl.p_lastname, cl.email
           'LEFT JOIN saturn_crm.contracts AS co ON cl.client_id = co.client_id ' \
           'LEFT JOIN saturn_crm.callcenter AS ca ON ca.contract_id = co.id ' \
           'LEFT JOIN saturn_crm.offices_staff AS st ON st.`code` = co.inserted_code ' \
-          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.partner_code = 442 AND (co.status_code = 1 OR' \
-          ' co.status_code = 5) AND co.status_callcenter_code = 1 AND co.exchanged = 0 AND cl.client_id IS NOT NULL ' \
-          'ORDER BY co.client_id, ca.updated_date DESC'
+          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.partner_code IN (442,570) ' \
+          'AND (co.status_code = 1 OR co.status_code = 5) AND co.status_callcenter_code = 1 AND co.exchanged = 0 ' \
+          'AND cl.client_id IS NOT NULL ORDER BY co.client_id, ca.updated_date DESC'
 
 # История:
 #          'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.partner_code = 442 AND (co.status_code = 1 OR' \
