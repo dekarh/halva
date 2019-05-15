@@ -193,7 +193,7 @@ dbconn_ops.close()
 dbconn_ops = MySQLConnection(**dbconfig_ops)
 dbconn_fin = MySQLConnection(**dbconfig_fin)
 
-if len(tuples_fin) > 0:
+if len(tuples_fins) > 0:
     for i, t_fin in enumerate(tuples_fins):
         cursor_fin = dbconn_fin.cursor()
         sql_fin = 'INSERT INTO saturn_fin.sovcombank_products(remote_id, first_name, last_name, middle_name,' \
