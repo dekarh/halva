@@ -51,7 +51,8 @@ sql_ops = 'SELECT cl.client_id, cl.p_surname, cl.p_name, cl.p_lastname, cl.email
           'LEFT JOIN saturn_crm.callcenter AS ca ON ca.contract_id = co.id ' \
           'LEFT JOIN saturn_crm.offices_staff AS st ON st.`code` = co.inserted_code ' \
           'WHERE cl.subdomain_id = 2 AND co.status_secure_code = 0 AND st.partner_code IN (442,570) ' \
-          'AND (co.status_code = 6 OR co.status_code = 10) AND co.status_callcenter_code = 1 AND co.exchanged = 0 ' \
+          'AND (co.status_code = 6 OR co.status_code = 10) AND co.status_callcenter_code = 1 ' \
+          'AND co.exchanged = 0 ' \
           'AND cl.client_id IS NOT NULL ORDER BY co.client_id, ca.updated_date DESC'
 
 # История:
@@ -82,7 +83,7 @@ bad_zayavka = 0
 for i, row in enumerate(rows):
     if last_id == row[0]:
         continue
-    if row[19] == 1:
+    if row[19] == 10:
         all_soc += 1
     else:
         all_alt += 1
