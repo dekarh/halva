@@ -14,7 +14,7 @@ from lib import read_config, lenl, s_minus, s, l, filter_rus_sp, filter_rus_minu
 # !!!! Обязательно первым значением "Имя файла"
 CONTROLLEDS = [
 'Имя файла',
-'8720ae4760e411e99c00005056b95c35'
+'94ec0419bdd011e9a7e9005056b95c35', 'ab5e61f5bdd011e9a7e9005056b95c35','6212a251bdd211e9a7e9005056b95c35'
 ]
 
 all_files = os.listdir(path=".")
@@ -30,7 +30,7 @@ for i, all_file in enumerate(all_files):
         try:
             os.remove(all_file)
         except OSError as e:          # errno.ENOENT = no such file or directory
-            if e.errno != OSError.errno.ENOENT:
+            if e.errno != OSError.ENOENT:
                 raise                 # re-raise exception if a different error occured
 
 has_files = False
@@ -106,7 +106,7 @@ for all_file in all_files:
                     excel_line.append('-')
         ws.append(excel_line)
 
-wb.save('halva-muhleg.xlsx')
+wb.save('halva-history.xlsx')
 
 
 
