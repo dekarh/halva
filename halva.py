@@ -79,7 +79,6 @@ for all_file in all_files:
     statistics_in_csv = {}
     statistics_in_csv['Скрытые'] = 0
     if all_file.endswith(".csv") and all_file.find('cards_95_') > -1:
-
         print(datetime.now().strftime("%H:%M:%S"),'загружаем', all_file) # загружаем csv
         updates = []
         bids_in_xls = {}
@@ -88,6 +87,19 @@ for all_file in all_files:
             for line in dict_reader:
                 q = str(line['CAMPAIGN_CONTENT']).strip()
                 remote_id = q[0:8] + '-' + q[8:12] + '-' + q[12:16] + '-' + q[16:20] + '-' + q[20:32]
+                cursor = dbconn.cursor()
+                cursor.execute('SELECT remote_id FROM saturn_fin.sovcombank_products WHERE remote_id = %s',
+                               (remote_id,))
+                rows = cursor.fetchall()
+                if not len(rows):
+                    q = str(line['CAMPAIGN_TERM']).strip()
+                    remote_id = q[0:8] + '-' + q[8:12] + '-' + q[12:16] + '-' + q[16:20] + '-' + q[20:32]
+                    cursor = dbconn.cursor()
+                    cursor.execute('SELECT remote_id FROM saturn_fin.sovcombank_products WHERE remote_id = %s',
+                                   (remote_id,))
+                    rows = cursor.fetchall()
+                if not len(rows):
+                    continue
                 if str(line['applied']).strip() != '' and str(line['applied']).strip() != 'NULL':
                     gone = int(str(line['applied']).strip()) + 1
                 else:
