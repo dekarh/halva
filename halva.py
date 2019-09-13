@@ -3,7 +3,8 @@
 
 
 import sys
-from _datetime import datetime
+from _datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 import time
 import os
 import zipfile
@@ -14,8 +15,7 @@ from lib import read_config, lenl, s_minus, s, l, filter_rus_sp, filter_rus_minu
 
 # Статистика с этой даты
 DATE_START_COUNT = datetime(2018,8,1)
-# До какой даты ставить статус "Отрицательный результат"
-DATE_END_OTKAZ = '2018-03-31'
+
 
 all_files = os.listdir(path=".")
 
@@ -57,6 +57,12 @@ cursor = dbconn.cursor()
 cursor.execute(sql, (DATE_START_COUNT,))
 rows = cursor.fetchall()
 statistics_before['Активированные'] = rows[0][0]
+# считаем количество дебетовых карт в базе
+sql = 'SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s AND status_code = 7'
+cursor = dbconn.cursor()
+cursor.execute(sql, (DATE_START_COUNT,))
+rows = cursor.fetchall()
+statistics_before['Дебетовые'] = rows[0][0]
 # считаем количество скрытых заявок в базе
 cursor = dbconn.cursor()
 cursor.execute('SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s '
@@ -70,14 +76,15 @@ cursor.execute('SELECT count(*) FROM saturn_fin.sovcombank_products WHERE insert
 rows = cursor.fetchall()
 statistics_before['НЕ одобренные и НЕ активированные'] = rows[0][0]
 
-print('Одобренные\t', 'Активированные\t', 'Скрытые\t', 'НЕ одобренные и НЕ активированные')
+print('Одобренные\t', 'Активированные\t', 'Скрытые\t', 'Дебетовые\t', 'НЕ одобренные и НЕ активированные')
 print(statistics_before['Одобренные'], '\t\t', statistics_before['Активированные'], '\t\t',
-      statistics_before['Скрытые'], '\t\t', statistics_before['НЕ одобренные и НЕ активированные'])
+      statistics_before['Скрытые'], statistics_before['Дебетовые'], '\t\t', '\t\t',
+      statistics_before['НЕ одобренные и НЕ активированные'])
 
 all_files.sort()
 for all_file in all_files:
-    statistics_in_csv = {}
-    statistics_in_csv['Скрытые'] = 0
+    statistics_in_csv = {'Одобренные': 0, 'Активированные': 0, 'Скрытые': 0, 'Дебетовые': 0,
+                         'НЕ одобренные и НЕ активированные': 0}
     if all_file.endswith(".csv") and all_file.find('cards_95_') > -1:
         print(datetime.now().strftime("%H:%M:%S"),'загружаем', all_file) # загружаем csv
         updates = []
@@ -85,6 +92,7 @@ for all_file in all_files:
         with open(all_file, 'r', encoding='utf-8') as input_file:
             dict_reader = csv.DictReader(input_file, delimiter='\t')
             for line in dict_reader:
+                # Ищем в БД id из CAMPAIGN_CONTENT
                 q = str(line['CAMPAIGN_CONTENT']).strip()
                 remote_id = q[0:8] + '-' + q[8:12] + '-' + q[12:16] + '-' + q[16:20] + '-' + q[20:32]
                 cursor = dbconn.cursor()
@@ -92,6 +100,7 @@ for all_file in all_files:
                                (remote_id,))
                 rows = cursor.fetchall()
                 if not len(rows):
+                    # Если нет - ищем в БД id из CAMPAIGN_TERM
                     q = str(line['CAMPAIGN_TERM']).strip()
                     remote_id = q[0:8] + '-' + q[8:12] + '-' + q[12:16] + '-' + q[16:20] + '-' + q[20:32]
                     cursor = dbconn.cursor()
@@ -99,6 +108,7 @@ for all_file in all_files:
                                    (remote_id,))
                     rows = cursor.fetchall()
                 if not len(rows):
+                    # Если не нашли ни того ни другого id в БД - переходим на следующую строчку отчета
                     continue
                 if str(line['applied']).strip() != '' and str(line['applied']).strip() != 'NULL':
                     gone = int(str(line['applied']).strip()) + 1
@@ -119,6 +129,11 @@ for all_file in all_files:
                         loaned = 1
                 else:
                     loaned = 0
+                if line.get('debit_card_issued', None):
+                    if str(line['debit_card_issued']).strip() != '' and str(line['debit_card_issued']).strip() != 'NULL':
+                        debit_card_issued = int(str(line['debit_card_issued']).strip()) + 1
+                else:
+                    debit_card_issued = 0
                 if str(line['ACTIVATED']).strip() != '' and str(line['ACTIVATED']).strip() != 'NULL':
                     activated = int(str(line['ACTIVATED']).strip()) + 1
                 else:
@@ -138,28 +153,19 @@ for all_file in all_files:
                     visit_status_code = 3
                 if accepted == 1 and gone == 2 and loaned == 1:
                     status = 3
-                    if statistics_in_csv.get('НЕ одобренные и НЕ активированные'):
-                        statistics_in_csv['НЕ одобренные и НЕ активированные'] +=1
-                    else:
-                        statistics_in_csv['НЕ одобренные и НЕ активированные'] = 1
+                    statistics_in_csv['НЕ одобренные и НЕ активированные'] +=1
                 elif accepted == 2:
                     status = 2
-                    if statistics_in_csv.get('Одобренные'):
-                        statistics_in_csv['Одобренные'] +=1
-                    else:
-                        statistics_in_csv['Одобренные'] = 1
+                    statistics_in_csv['Одобренные'] +=1
                 else:
                     status = 1
-                    if statistics_in_csv.get('НЕ одобренные и НЕ активированные'):
-                        statistics_in_csv['НЕ одобренные и НЕ активированные'] +=1
-                    else:
-                        statistics_in_csv['НЕ одобренные и НЕ активированные'] = 1
+                    statistics_in_csv['НЕ одобренные и НЕ активированные'] +=1
+                if debit_card_issued == 2:
+                    status = 7
+                    statistics_in_csv['Дебетовые'] +=1
                 if activated == 2:
                     status = 6
-                    if statistics_in_csv.get('Активированные'):
-                        statistics_in_csv['Активированные'] +=1
-                    else:
-                        statistics_in_csv['Активированные'] = 1
+                    statistics_in_csv['Активированные'] +=1
                 bids_in_xls[remote_id] = {'remote_id' : remote_id,
                                           'status': status,
                                           'callcenter_status_code': callcenter_status_code,
@@ -167,7 +173,8 @@ for all_file in all_files:
                 updates.append((status, callcenter_status_code, visit_status_code, remote_id))
         input_file.close()
         print(statistics_in_csv['Одобренные'], '\t\t', statistics_in_csv['Активированные'], '\t\t',
-              statistics_in_csv['Скрытые'], '\t\t', statistics_in_csv['НЕ одобренные и НЕ активированные'])
+              statistics_in_csv['Скрытые'], '\t\t', statistics_in_csv['Дебетовые'], '\t\t',
+              statistics_in_csv['НЕ одобренные и НЕ активированные'])
 
         #        has_doubles = []
 #        for i, up_i in enumerate(updates):                # проверка на дубли
@@ -212,6 +219,13 @@ cursor.execute('SELECT count(*) FROM saturn_fin.sovcombank_products WHERE insert
                'AND status_hidden = 1', (DATE_START_COUNT,))
 rows = cursor.fetchall()
 statistics_after['Скрытые'] = rows[0][0]
+# считаем количество дебетовых карт в базе
+sql = 'SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s AND status_code = 7'
+cursor = dbconn.cursor()
+cursor.execute(sql, (DATE_START_COUNT,))
+rows = cursor.fetchall()
+statistics_after['Дебетовые'] = rows[0][0]
+
 # заявки, без статусов: одобрено, активировано(!!! отрицательный результат и отказ может стать одобреным !!!)
 cursor = dbconn.cursor()
 cursor.execute('SELECT count(*) FROM saturn_fin.sovcombank_products WHERE inserted_date > %s '
@@ -221,20 +235,24 @@ statistics_after['НЕ одобренные и НЕ активированные
 
 print('Стало:')
 print(statistics_after['Одобренные'], '\t\t', statistics_after['Активированные'], '\t\t',
-      statistics_after['Скрытые'], '\t\t', statistics_after['НЕ одобренные и НЕ активированные'])
+      statistics_after['Скрытые'], '\t\t', statistics_after['Дебетовые'], '\t\t',
+      statistics_after['НЕ одобренные и НЕ активированные'])
 print('ИЗМЕНЕНИЯ:')
 print(statistics_after['Одобренные'] - statistics_before['Одобренные'], '\t\t',
       statistics_after['Активированные'] - statistics_before['Активированные'], '\t\t',
       statistics_after['Скрытые'] - statistics_before['Скрытые'], '\t\t',
+      statistics_after['Дебетовые'] - statistics_before['Дебетовые'], '\t\t',
       statistics_after['НЕ одобренные и НЕ активированные'] - statistics_before['НЕ одобренные и НЕ активированные'])
 
-
+# До какой даты ставить статус "Отрицательный результат"
+# 15 сентября проставляем статусы на июньские и июльские заявки, 15 октября добавляется август...
+date_end_otkaz = datetime.now() - timedelta(days=15) - relativedelta(months=1) + \
+                 relativedelta(day=1, hour=0, minute=0, second=0, microsecond=0)
 cursor = dbconn.cursor()
 cursor.execute('UPDATE saturn_fin.sovcombank_products SET status_code = 5 WHERE status_code != 2 AND status_code != 3 '
                'AND status_code != 101 AND status_code != 100 AND status_code != 5 AND inserted_date < %s',
-               (DATE_END_OTKAZ,) )
+               (date_end_otkaz,) )
 dbconn.commit()
-
 dbconn.close()
 
 
