@@ -124,7 +124,7 @@ for all_file in all_files:
         updates = []
         bids_in_xls = {}
         lines_on_file = count_lines(all_file)
-        printProgressBar(0, lines_on_file, prefix='Прогресс:', suffix='Сделано', length=50)
+        printProgressBar(0, lines_on_file, prefix='Прогресс:', suffix='Прочитано', length=50)
         with open(all_file, 'r', encoding='utf-8') as input_file:
             dict_reader = csv.DictReader(input_file, delimiter='\t')
             for line in dict_reader:
@@ -138,7 +138,7 @@ for all_file in all_files:
                     if remote_id not in all_id_in_bd:
                         # Если не нашли ни того ни другого id в БД - переходим на следующую строчку отчета
                         continue
-                printProgressBar(dict_reader.line_num, lines_on_file, prefix='Прогресс:', suffix='Сделано', length=50)
+                printProgressBar(dict_reader.line_num, lines_on_file, prefix='Прогресс:', suffix='Прочитано', length=50)
                 if str(line['applied']).strip() != '' and str(line['applied']).strip() != 'NULL':
                     # aplied => gone 0,1,2
                     gone = int(str(line['applied']).strip()) + 1
@@ -225,10 +225,22 @@ for all_file in all_files:
 
         dbconn = MySQLConnection(**dbconfig)
         cursor = dbconn.cursor()
-        cursor.executemany('UPDATE saturn_fin.sovcombank_products SET status_code = %s, callcenter_status_code = %s, '
-                           'visit_status_code = %s WHERE remote_id = %s', updates)
+        updates_tek = []
+        printProgressBar(0, len(updates), prefix='Прогресс:', suffix='Обновлено в БД', length=50)
+        for i, update in enumerate(updates):
+            updates_tek.append(update)
+            if not i % 100 and i > 0:
+                cursor.executemany('UPDATE saturn_fin.sovcombank_products SET status_code = %s, '
+                                   'callcenter_status_code = %s, visit_status_code = %s WHERE remote_id = %s',
+                                   updates_tek)
+                dbconn.commit()
+                updates_tek = []
+                printProgressBar(i, len(updates), prefix='Прогресс:', suffix='Обновлено в БД', length=50)
+        cursor.executemany('UPDATE saturn_fin.sovcombank_products SET status_code = %s, '
+                           'callcenter_status_code = %s, visit_status_code = %s WHERE remote_id = %s',
+                           updates_tek)
         dbconn.commit()
-
+        printProgressBar(len(updates), len(updates), prefix='Прогресс:', suffix='Обновлено в БД', length=50)
         try:
             os.rename(all_file, 'loaded/' + all_file)
         except OSError as e:  # errno.ENOENT = no such file or directory
