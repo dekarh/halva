@@ -4,6 +4,7 @@
 
 import sys
 from _datetime import datetime, timedelta
+from time import sleep
 from dateutil.relativedelta import relativedelta
 import time
 import os
@@ -12,6 +13,31 @@ import csv
 from mysql.connector import MySQLConnection, Error
 
 from lib import read_config, lenl, s_minus, s, l, filter_rus_sp, filter_rus_minus
+
+def count_lines(filename, chunk_size=1<<13):
+    with open(filename) as file:
+        return sum(chunk.count('\n')
+                   for chunk in iter(lambda: file.read(chunk_size), ''))
+
+def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = '\r')
+    # Print New Line on Complete
+    if iteration == total:
+        print()
 
 # Статистика с этой даты
 DATE_START_COUNT = datetime(2018,8,1)
@@ -77,11 +103,19 @@ rows = cursor.fetchall()
 statistics_before['НЕ одобренные и НЕ активированные'] = rows[0][0]
 
 print('Одобренные\t', 'Активированные\t', 'Скрытые\t', 'Дебетовые\t', 'НЕ одобренные и НЕ активированные')
-print(statistics_before['Одобренные'], '\t\t', statistics_before['Активированные'], '\t\t',
-      statistics_before['Скрытые'], statistics_before['Дебетовые'], '\t\t', '\t\t',
+print(statistics_before['Одобренные'], '\t\t', statistics_before['Активированные'], '\t\t\t',
+      statistics_before['Скрытые'], '\t\t', statistics_before['Дебетовые'], '\t',
       statistics_before['НЕ одобренные и НЕ активированные'])
 
 all_files.sort()
+aiib = []
+cursor = dbconn.cursor()
+cursor.execute('SELECT remote_id FROM saturn_fin.sovcombank_products')
+rows = cursor.fetchall()
+for row in rows:
+    aiib.append(row[0])
+all_id_in_bd = tuple(aiib)
+
 for all_file in all_files:
     statistics_in_csv = {'Одобренные': 0, 'Активированные': 0, 'Скрытые': 0, 'Дебетовые': 0,
                          'НЕ одобренные и НЕ активированные': 0}
@@ -89,40 +123,39 @@ for all_file in all_files:
         print(datetime.now().strftime("%H:%M:%S"),'загружаем', all_file) # загружаем csv
         updates = []
         bids_in_xls = {}
+        lines_on_file = count_lines(all_file)
+        printProgressBar(0, lines_on_file, prefix='Прогресс:', suffix='Сделано', length=50)
         with open(all_file, 'r', encoding='utf-8') as input_file:
             dict_reader = csv.DictReader(input_file, delimiter='\t')
             for line in dict_reader:
                 # Ищем в БД id из CAMPAIGN_CONTENT
                 q = str(line['CAMPAIGN_CONTENT']).strip()
                 remote_id = q[0:8] + '-' + q[8:12] + '-' + q[12:16] + '-' + q[16:20] + '-' + q[20:32]
-                cursor = dbconn.cursor()
-                cursor.execute('SELECT remote_id FROM saturn_fin.sovcombank_products WHERE remote_id = %s',
-                               (remote_id,))
-                rows = cursor.fetchall()
-                if not len(rows):
+                if remote_id not in all_id_in_bd:
                     # Если нет - ищем в БД id из CAMPAIGN_TERM
                     q = str(line['CAMPAIGN_TERM']).strip()
                     remote_id = q[0:8] + '-' + q[8:12] + '-' + q[12:16] + '-' + q[16:20] + '-' + q[20:32]
-                    cursor = dbconn.cursor()
-                    cursor.execute('SELECT remote_id FROM saturn_fin.sovcombank_products WHERE remote_id = %s',
-                                   (remote_id,))
-                    rows = cursor.fetchall()
-                if not len(rows):
-                    # Если не нашли ни того ни другого id в БД - переходим на следующую строчку отчета
-                    continue
+                    if remote_id not in all_id_in_bd:
+                        # Если не нашли ни того ни другого id в БД - переходим на следующую строчку отчета
+                        continue
+                printProgressBar(dict_reader.line_num, lines_on_file, prefix='Прогресс:', suffix='Сделано', length=50)
                 if str(line['applied']).strip() != '' and str(line['applied']).strip() != 'NULL':
+                    # aplied => gone 0,1,2
                     gone = int(str(line['applied']).strip()) + 1
                 else:
                     gone = 0
                 if str(line['issued']).strip() != ''and str(line['issued']).strip() != 'NULL':
+                    # issued => accepted 0,1,2
                     accepted = int(str(line['issued']).strip()) + 1
                 else:
                     accepted = 0
                 if str(line['contacted']).strip() != '' and str(line['contacted']).strip() != 'NULL':
+                    # contacted => phoned 0,1,2
                     phoned = int(str(line['contacted']).strip()) + 1
                 else:
                     phoned = 0
                 if str(line['LOAN_AMOUNT']).strip() != '' and str(line['LOAN_AMOUNT']).strip() != 'NULL':
+                    # LOAN_AMOUNT => loaned 0,1,2
                     if float(str(line['LOAN_AMOUNT']).strip()) > 0:
                         loaned = 2
                     else:
@@ -130,11 +163,13 @@ for all_file in all_files:
                 else:
                     loaned = 0
                 if line.get('debit_card_issued', None):
+                    # issued => accepted 0,1,2
                     if str(line['debit_card_issued']).strip() != '' and str(line['debit_card_issued']).strip() != 'NULL':
                         debit_card_issued = int(str(line['debit_card_issued']).strip()) + 1
                 else:
                     debit_card_issued = 0
                 if str(line['ACTIVATED']).strip() != '' and str(line['ACTIVATED']).strip() != 'NULL':
+                    # issued => accepted 0,1,2
                     activated = int(str(line['ACTIVATED']).strip()) + 1
                 else:
                     activated = 0
@@ -172,8 +207,8 @@ for all_file in all_files:
                                           'visit_status_code': visit_status_code,}
                 updates.append((status, callcenter_status_code, visit_status_code, remote_id))
         input_file.close()
-        print(statistics_in_csv['Одобренные'], '\t\t', statistics_in_csv['Активированные'], '\t\t',
-              statistics_in_csv['Скрытые'], '\t\t', statistics_in_csv['Дебетовые'], '\t\t',
+        print(statistics_in_csv['Одобренные'], '\t\t', statistics_in_csv['Активированные'], '\t\t\t',
+              statistics_in_csv['Скрытые'], '\t\t', statistics_in_csv['Дебетовые'], '\t',
               statistics_in_csv['НЕ одобренные и НЕ активированные'])
 
         #        has_doubles = []
@@ -234,14 +269,14 @@ rows = cursor.fetchall()
 statistics_after['НЕ одобренные и НЕ активированные'] = rows[0][0]
 
 print('Стало:')
-print(statistics_after['Одобренные'], '\t\t', statistics_after['Активированные'], '\t\t',
-      statistics_after['Скрытые'], '\t\t', statistics_after['Дебетовые'], '\t\t',
+print(statistics_after['Одобренные'], '\t\t', statistics_after['Активированные'], '\t\t\t',
+      statistics_after['Скрытые'], '\t\t', statistics_after['Дебетовые'], '\t',
       statistics_after['НЕ одобренные и НЕ активированные'])
 print('ИЗМЕНЕНИЯ:')
 print(statistics_after['Одобренные'] - statistics_before['Одобренные'], '\t\t',
-      statistics_after['Активированные'] - statistics_before['Активированные'], '\t\t',
+      statistics_after['Активированные'] - statistics_before['Активированные'], '\t\t\t',
       statistics_after['Скрытые'] - statistics_before['Скрытые'], '\t\t',
-      statistics_after['Дебетовые'] - statistics_before['Дебетовые'], '\t\t',
+      statistics_after['Дебетовые'] - statistics_before['Дебетовые'], '\t',
       statistics_after['НЕ одобренные и НЕ активированные'] - statistics_before['НЕ одобренные и НЕ активированные'])
 
 # До какой даты ставить статус "Отрицательный результат"
