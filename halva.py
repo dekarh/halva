@@ -296,9 +296,8 @@ print(statistics_after['Одобренные'] - statistics_before['Одобре
 date_end_otkaz = datetime.now() - timedelta(days=15) - relativedelta(months=1) + \
                  relativedelta(day=1, hour=0, minute=0, second=0, microsecond=0)
 cursor = dbconn.cursor()
-cursor.execute('UPDATE saturn_fin.sovcombank_products SET status_code = 5 WHERE status_code != 2 AND status_code != 3 '
-               'AND status_code != 101 AND status_code != 100 AND status_code != 5 AND inserted_date < %s',
-               (date_end_otkaz,) )
+cursor.execute('UPDATE saturn_fin.sovcombank_products SET status_code = 5 WHERE status_code IN (0,1,4,200) '
+               'AND inserted_date < %s', (date_end_otkaz,) )
 dbconn.commit()
 dbconn.close()
 
