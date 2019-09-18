@@ -38,7 +38,7 @@ for all_file in all_files:
             dict_reader = csv.DictReader(input_file, delimiter='\t')
             for line in dict_reader:
                 cc_id = str(line['CAMPAIGN_CONTENT']).strip()
-                ct_id = str(line['CAMPAIGN_TERM']).strip()
+                ct_id = str(line.get('CAMPAIGN_TERM','')).strip()
 #                cc_id = q[0:8] + '-' + q[8:12] + '-' + q[12:16] + '-' + q[16:20] + '-' + q[20:32]
                 for i, controlled in enumerate(CONTROLLEDS):
                     if i == 0:
@@ -87,7 +87,7 @@ for all_file in all_files:
                             callcenter_status_code = 'нетИнфОЗвонке'
                         if gone == 2:
                             visit_status_code = 'Приходил в Банк'
-                            callcenter_status_code = 3
+                            callcenter_status_code = 'нетИнфОЗвонке'
                         elif gone == 1:
                             visit_status_code = 'нетИнфОВизите'
                         else:
