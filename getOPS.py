@@ -43,6 +43,8 @@ def chuvak(is_chuvak):
         return 'ЧУВАШСКАЯ'
     elif s(is_chuvak).split(' ')[0] == 'САХА':
         return 'САХА'
+    elif s(is_chuvak).find('КУЗБАСС') > -1:
+        return 'КЕМЕРОВСКАЯ'
     else:
         return is_chuvak
 
