@@ -44,8 +44,9 @@ dbconn_fin = MySQLConnection(**dbconfig_fin)
 
 has_ph = []
 cursor_chk = dbconn_fin.cursor()
-cursor_chk.execute('SELECT phone FROM sovcombank_products WHERE inserted_date > %s GROUP BY phone',
-                   (datetime.now() - relativedelta.relativedelta(months=3),))
+#cursor_chk.execute('SELECT phone FROM sovcombank_products WHERE inserted_date > %s GROUP BY phone',
+#                   (datetime.now() - relativedelta.relativedelta(months=3),))
+cursor_chk.execute('SELECT phone FROM sovcombank_products GROUP BY phone')
 rows = cursor_chk.fetchall()
 for row in rows:
     has_ph.append(row[0])
