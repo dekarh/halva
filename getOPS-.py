@@ -2,9 +2,8 @@
 # Робот выгружающий из СатурнОПС
 
 import sys
-import datetime
-import time
-import csv
+from datetime import datetime, timedelta
+from dateutil import relativedelta
 from mysql.connector import MySQLConnection, Error
 
 from lib import read_config, lenl, s_minus, s, l, fine_snils
@@ -28,9 +27,9 @@ HALVA_REGIONS = ["АЛТАЙСКИЙ КРАЙ","АМУРСКАЯ ОБЛАСТЬ"
            "ЧУКОТСКИЙ АВТОНОМНЫЙ ОКРУГ","ЯМАЛО-НЕНЕЦКИЙ АВТОНОМНЫЙ ОКРУГ","ЯРОСЛАВСКАЯ ОБЛАСТЬ","КУРГАНСКАЯ ОБЛАСТЬ"]
 
 def chuvak(is_chuvak):
-    if s(is_chuvak).split(' ')[0] == 'ЧУВАШСКАЯ':
+    if s(is_chuvak).find('ЧУВАШСКАЯ') > -1:
         return 'ЧУВАШСКАЯ'
-    elif s(is_chuvak).split(' ')[0] == 'САХА':
+    elif s(is_chuvak).find('САХА') > -1:
         return 'САХА'
     elif s(is_chuvak).find('КУЗБАСС') > -1:
         return 'КЕМЕРОВСКАЯ'
@@ -43,6 +42,14 @@ dbconn_ops = MySQLConnection(**dbconfig_ops)
 dbconfig_fin = read_config(filename='halva.ini', section='SaturnFIN')
 dbconn_fin = MySQLConnection(**dbconfig_fin)
 
+has_ph = []
+cursor_chk = dbconn_fin.cursor()
+cursor_chk.execute('SELECT phone FROM sovcombank_products WHERE inserted_date > %s GROUP BY phone',
+                   (datetime.now() - relativedelta.relativedelta(months=3),))
+rows = cursor_chk.fetchall()
+for row in rows:
+    has_ph.append(row[0])
+has_phones = tuple(has_ph)
 
 cursor = dbconn_ops.cursor()
 sql_ops = 'SELECT cl.client_id, cl.p_surname, cl.p_name, cl.p_lastname, cl.email, ca.client_phone, cl.b_date, cl.p_region, ' \
@@ -145,10 +152,7 @@ for i, row in enumerate(rows):
         tuples_ops_err.append((row[0],))
         continue
 
-    cursor_chk = dbconn_fin.cursor()
-    cursor_chk.execute('SELECT remote_id, phone FROM sovcombank_products WHERE phone = %s', (phone,))
-    rows_chk = cursor_chk.fetchall()
-    if len(rows_chk) > 0:
+    if phone in has_phones:
         bad_zayavka += 1
         print('"' + fine_snils(row[15]) + '" "' + row[1], row[2], row[3] + '"', phone, '"' + region + '"',
               '"- Такой телефон уже есть в БД"')
@@ -156,11 +160,11 @@ for i, row in enumerate(rows):
 
     if row[19] == 10:
         tuples_fin.append((row[0], row[1], row[2], row[3], row[4], phone, row[6], HALVA_REGIONS[region_id],
-                 town, datetime.datetime.now(), 3090, 0))
+                 town, datetime.now(), 3090, 0))
         good_soc += 1
     else:
         tuples_fin.append((row[0], row[1], row[2], row[3], row[4], phone, row[6], HALVA_REGIONS[region_id],
-                 town, datetime.datetime.now(), 3818, 0))
+                 town, datetime.now(), 3818, 0))
         good_alt += 1
 
     tuples_ops.append((row[0],))
