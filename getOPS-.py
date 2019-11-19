@@ -44,9 +44,9 @@ dbconn_fin = MySQLConnection(**dbconfig_fin)
 
 has_ph = []
 cursor_chk = dbconn_fin.cursor()
-#cursor_chk.execute('SELECT phone FROM sovcombank_products WHERE inserted_date > %s GROUP BY phone',
-#                   (datetime.now() - relativedelta.relativedelta(months=3),))
-cursor_chk.execute('SELECT phone FROM sovcombank_products GROUP BY phone')
+cursor_chk.execute('SELECT phone FROM sovcombank_products WHERE inserted_date > %s GROUP BY phone',
+                   (datetime.now() - relativedelta.relativedelta(months=3),))
+#cursor_chk.execute('SELECT phone FROM sovcombank_products GROUP BY phone')
 rows = cursor_chk.fetchall()
 for row in rows:
     has_ph.append(row[0])
@@ -97,7 +97,7 @@ for i, row in enumerate(rows):
         all_soc += 1
     else:
         all_alt += 1
-    phone = row[5]
+    phone = row[16]
     if l(phone) == 0:
         if l(row[16]) != 0:
             phone = row[16]
